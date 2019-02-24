@@ -10,7 +10,11 @@ import (
 	"go.uber.org/zap"
 )
 
-type Memory struct {
+// memory is an implementation of a joe.Memory which stores all values as a JSON
+// encoded file. Note that there is no need for a joe.Memory to handle
+// synchronization for concurrent access (e.g. via locks) because this is
+// automatically handled by the joe.Brain.
+type memory struct {
 	path   string
 	logger *zap.Logger
 
@@ -18,8 +22,42 @@ type Memory struct {
 	data map[string]string
 }
 
-func NewMemory(path string, opts ...Option) (*Memory, error) {
-	memory := &Memory{
+// Memory is a joe.Option which is supposed to be passed to joe.New(…) to
+// configure a new bot. The path indicates the destination file at which the
+// memory will store its values encoded as JSON object. If there is already a
+// JSON encoded file at the given path it will be loaded and decoded into memory
+// to serve future requests. If the file exists but cannot be opened or does not
+// contain a valid JSON object its error will be deferred until the bot is
+// actually started via its Run() function.
+//
+// Example usage:
+//     b := joe.New("example",
+//         file.Memory("/tmp/joe.json"),
+//         …
+//     )
+func Memory(path string) joe.Option {
+	return func(conf *joe.Config) error {
+		var opts []Option
+		if conf.Logger != nil {
+			opts = append(opts, WithLogger(conf.Logger.Named("memory")))
+		}
+
+		memory, err := NewMemory(path, opts...)
+		if err != nil {
+			return err
+		}
+
+		conf.Memory = memory
+		return nil
+	}
+}
+
+// NewMemory creates a new Memory instance that persists all values to the given
+// path. If there is already a JSON encoded file at the given path it is loaded
+// and decoded into memory to serve future requests. An error is returned if the
+// file exists but cannot be opened or does not contain a valid JSON object.
+func NewMemory(path string, opts ...Option) (joe.Memory, error) {
+	memory := &memory{
 		path: path,
 		data: map[string]string{},
 	}
@@ -59,35 +97,24 @@ func NewMemory(path string, opts ...Option) (*Memory, error) {
 	return memory, nil
 }
 
-func MemoryOption(path string) joe.Option {
-	return func(conf *joe.Config) error {
-		var opts []Option
-		if conf.Logger != nil {
-			opts = append(opts, WithLogger(conf.Logger.Named("memory")))
-		}
-
-		memory, err := NewMemory(path, opts...)
-		if err != nil {
-			return err
-		}
-
-		conf.Memory = memory
-		return nil
-	}
-}
-
-func (m *Memory) Set(key, value string) error {
+// Set assign the key to the value and then saves the updated memory to its JSON
+// file. An error is returned if this function is called after the memory was
+// closed already or if the file could not be written or updated.
+func (m *memory) Set(key, value string) error {
 	if m.data == nil {
 		return errors.New("brain was already shut down")
 	}
 
 	m.data[key] = value
-	err := m.persist()
-
-	return err
+	return m.persist()
 }
 
-func (m *Memory) Get(key string) (string, bool, error) {
+// Get returns the value that is associated with the given key. The second
+// return value indicates if the key actually existed in the memory.
+//
+// An error is only returned if this function is called after the memory was
+// closed already.
+func (m *memory) Get(key string) (string, bool, error) {
 	if m.data == nil {
 		return "", false, errors.New("brain was already shut down")
 	}
@@ -96,19 +123,31 @@ func (m *Memory) Get(key string) (string, bool, error) {
 	return value, ok, nil
 }
 
-func (m *Memory) Delete(key string) (bool, error) {
+// Delete removes any value that might have been assigned to the key earlier.
+// The boolean return value indicates if the memory contained the key. If it did
+// not contain the key the function does nothing and returns without an error.
+// If the key existed it is removed and the corresponding JSON file is updated.
+//
+// An error is returned if this function is called after the memory was closed
+// already or if the file could not be written or updated.
+func (m *memory) Delete(key string) (bool, error) {
 	if m.data == nil {
 		return false, errors.New("brain was already shut down")
 	}
 
 	_, ok := m.data[key]
-	delete(m.data, key)
-	err := m.persist()
+	if !ok {
+		return false, nil
+	}
 
-	return ok, err
+	delete(m.data, key)
+	return ok, m.persist()
 }
 
-func (m *Memory) Memories() (map[string]string, error) {
+// Memories returns a copy of all known key-value pairs of this memory.
+// An error is only returned if this function is called after the memory was
+// closed already.
+func (m *memory) Memories() (map[string]string, error) {
 	if m.data == nil {
 		return nil, errors.New("brain was already shut down")
 	}
@@ -121,7 +160,9 @@ func (m *Memory) Memories() (map[string]string, error) {
 	return data, nil
 }
 
-func (m *Memory) Close() error {
+// Close removes all data from the memory. Note that all calls to the memory
+// will fail after this function has been called.
+func (m *memory) Close() error {
 	if m.data == nil {
 		return errors.New("brain was already closed")
 	}
@@ -131,7 +172,7 @@ func (m *Memory) Close() error {
 	return nil
 }
 
-func (m *Memory) persist() error {
+func (m *memory) persist() error {
 	f, err := os.OpenFile(m.path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
 		return errors.Wrap(err, "failed to open file to persist data")
