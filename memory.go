@@ -35,19 +35,14 @@ type memory struct {
 //         file.Memory("/tmp/joe.json"),
 //         …
 //     )
-func Memory(path string) joe.Option {
+func Memory(path string) joe.Module {
 	return func(conf *joe.Config) error {
-		var opts []Option
-		if conf.Logger != nil {
-			opts = append(opts, WithLogger(conf.Logger.Named("memory")))
-		}
-
-		memory, err := NewMemory(path, opts...)
+		memory, err := NewMemory(path, WithLogger(conf.Logger("memory")))
 		if err != nil {
 			return err
 		}
 
-		conf.Memory = memory
+		conf.SetMemory(memory)
 		return nil
 	}
 }
