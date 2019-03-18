@@ -36,7 +36,7 @@ type memory struct {
 //         …
 //     )
 func Memory(path string) joe.Module {
-	return func(conf *joe.Config) error {
+	return joe.ModuleFunc(func(conf *joe.Config) error {
 		memory, err := NewMemory(path, WithLogger(conf.Logger("memory")))
 		if err != nil {
 			return err
@@ -44,7 +44,7 @@ func Memory(path string) joe.Module {
 
 		conf.SetMemory(memory)
 		return nil
-	}
+	})
 }
 
 // NewMemory creates a new Memory instance that persists all values to the given
