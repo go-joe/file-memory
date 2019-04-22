@@ -19,7 +19,7 @@ type memory struct {
 	logger *zap.Logger
 
 	mu   sync.RWMutex
-	data map[string]string
+	data map[string][]byte
 }
 
 // Memory is a joe.Option which is supposed to be passed to joe.New(…) to
@@ -54,7 +54,7 @@ func Memory(path string) joe.Module {
 func NewMemory(path string, opts ...Option) (joe.Memory, error) {
 	memory := &memory{
 		path: path,
-		data: map[string]string{},
+		data: map[string][]byte{},
 	}
 
 	for _, opt := range opts {
@@ -95,7 +95,7 @@ func NewMemory(path string, opts ...Option) (joe.Memory, error) {
 // Set assign the key to the value and then saves the updated memory to its JSON
 // file. An error is returned if this function is called after the memory was
 // closed already or if the file could not be written or updated.
-func (m *memory) Set(key, value string) error {
+func (m *memory) Set(key string, value []byte) error {
 	if m.data == nil {
 		return errors.New("brain was already shut down")
 	}
@@ -109,9 +109,9 @@ func (m *memory) Set(key, value string) error {
 //
 // An error is only returned if this function is called after the memory was
 // closed already.
-func (m *memory) Get(key string) (string, bool, error) {
+func (m *memory) Get(key string) ([]byte, bool, error) {
 	if m.data == nil {
-		return "", false, errors.New("brain was already shut down")
+		return nil, false, errors.New("brain was already shut down")
 	}
 
 	value, ok := m.data[key]
@@ -139,20 +139,20 @@ func (m *memory) Delete(key string) (bool, error) {
 	return ok, m.persist()
 }
 
-// Memories returns a copy of all known key-value pairs of this memory.
+// Keys returns a list of all keys known to this memory.
 // An error is only returned if this function is called after the memory was
 // closed already.
-func (m *memory) Memories() (map[string]string, error) {
+func (m *memory) Keys() ([]string, error) {
 	if m.data == nil {
 		return nil, errors.New("brain was already shut down")
 	}
 
-	data := make(map[string]string, len(m.data))
-	for k, v := range m.data {
-		data[k] = v
+	keys := make([]string, 0, len(m.data))
+	for k := range m.data {
+		keys = append(keys, k)
 	}
 
-	return data, nil
+	return keys, nil
 }
 
 // Close removes all data from the memory. Note that all calls to the memory
