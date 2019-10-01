@@ -11,21 +11,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func withTempFile(t *testing.T, f func(mem joe.Memory)) {
-
+// noinspection GoUnhandledErrorResult
+func withTempFile(t *testing.T, fun func(mem joe.Memory)) {
 	tempFile := path.Join(os.TempDir(), fmt.Sprintf("test_%d_%d", os.Getpid(), time.Now().UnixNano()))
 	defer os.Remove(tempFile)
 
 	mem, err := NewMemory(tempFile)
 	require.NoError(t, err)
 
-	f(mem)
-	mem.Close()
+	fun(mem)
+	err = mem.Close()
+	require.NoError(t, err)
 }
 
 func TestMemory_Set(t *testing.T) {
 	withTempFile(t, func(mem joe.Memory) {
-		//set a value
+		// set a value
 		err := mem.Set("foo", []byte("bar"))
 		require.NoError(t, err)
 	})
@@ -39,7 +40,7 @@ func TestMemory_Get(t *testing.T) {
 		require.False(t, found)
 		require.NoError(t, err)
 
-		//set a value
+		// set a value
 		err = mem.Set("foo", []byte("bar"))
 		require.NoError(t, err)
 
@@ -53,7 +54,7 @@ func TestMemory_Get(t *testing.T) {
 
 func TestMemory_Delete(t *testing.T) {
 	withTempFile(t, func(mem joe.Memory) {
-		//set a value
+		// set a value
 		err := mem.Set("foo", []byte("bar"))
 		require.NoError(t, err)
 
@@ -78,10 +79,8 @@ func TestMemory_Delete_NoneAffected(t *testing.T) {
 }
 
 func TestMemory_Keys(t *testing.T) {
-
 	withTempFile(t, func(mem joe.Memory) {
 		keys := []string{"foo1", "foo2", "foo3"}
-
 		for _, k := range keys {
 			require.NoError(t, mem.Set(k, []byte(k+" value")))
 		}
