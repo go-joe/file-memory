@@ -49,8 +49,6 @@ func TestMemory_Get(t *testing.T) {
 		require.True(t, found)
 		require.NoError(t, err)
 	})
-
-
 }
 
 func TestMemory_Delete(t *testing.T) {
