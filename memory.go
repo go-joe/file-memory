@@ -3,6 +3,7 @@ package file
 import (
 	"encoding/json"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/go-joe/joe"
@@ -152,6 +153,9 @@ func (m *memory) Keys() ([]string, error) {
 		keys = append(keys, k)
 	}
 
+	// provide a stable result
+	sort.Strings(keys)
+
 	return keys, nil
 }
 
@@ -163,7 +167,6 @@ func (m *memory) Close() error {
 	}
 
 	m.data = nil
-
 	return nil
 }
 
