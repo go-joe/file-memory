@@ -1,6 +1,7 @@
 <h1 align="center">Joe Bot - File Storage</h1>
 <p align="center">Basic file storage memory adapater. https://github.com/go-joe/joe</p>
 <p align="center">
+    <a href="https://github.com/go-joe/file-memory/releases"><img src="https://img.shields.io/github/tag/go-joe/file-memory.svg?label=version&color=brightgreen"></a>
 	<a href="https://circleci.com/gh/go-joe/file-memory/tree/master"><img src="https://circleci.com/gh/go-joe/file-memory/tree/master.svg?style=shield"></a>
 	<a href="https://goreportcard.com/report/github.com/go-joe/file-memory"><img src="https://goreportcard.com/badge/github.com/go-joe/file-memory"></a>
 	<a href="https://codecov.io/gh/go-joe/file-memory"><img src="https://codecov.io/gh/go-joe/file-memory/branch/master/graph/badge.svg"/></a>
