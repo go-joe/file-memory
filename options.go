@@ -1,3 +1,5 @@
+// Package file implements file based memory for the Joe bot library.
+// https://github.com/go-joe/joe
 package file
 
 import "go.uber.org/zap"
