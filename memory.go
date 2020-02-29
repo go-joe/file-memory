@@ -2,12 +2,12 @@ package file
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"sort"
-	"sync"
 
 	"github.com/go-joe/joe"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -18,9 +18,7 @@ import (
 type memory struct {
 	path   string
 	logger *zap.Logger
-
-	mu   sync.RWMutex
-	data map[string][]byte
+	data   map[string][]byte
 }
 
 // Memory is a joe.Option which is supposed to be passed to joe.New(…) to
@@ -75,13 +73,13 @@ func NewMemory(path string, opts ...Option) (joe.Memory, error) {
 	case os.IsNotExist(err):
 		memory.logger.Debug("File does not exist. Continuing with empty memory", zap.String("path", path))
 	case err != nil:
-		return nil, errors.Wrap(err, "failed to open file")
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	default:
 		memory.logger.Debug("Decoding JSON from memory file", zap.String("path", path))
 		err := json.NewDecoder(f).Decode(&memory.data)
 		_ = f.Close()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed decode data as JSON")
+			return nil, fmt.Errorf("failed decode data as JSON: %w", err)
 		}
 	}
 
@@ -173,18 +171,18 @@ func (m *memory) Close() error {
 func (m *memory) persist() error {
 	f, err := os.OpenFile(m.path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0660)
 	if err != nil {
-		return errors.Wrap(err, "failed to open file to persist data")
+		return fmt.Errorf("failed to open file to persist data: %w", err)
 	}
 
 	err = json.NewEncoder(f).Encode(m.data)
 	if err != nil {
 		_ = f.Close()
-		return errors.Wrap(err, "failed to encode data as JSON")
+		return fmt.Errorf("failed to encode data as JSON: %w", err)
 	}
 
 	err = f.Close()
 	if err != nil {
-		return errors.Wrap(err, "failed to close file; data might not have been fully persisted to disk")
+		return fmt.Errorf("failed to close file; data might not have been fully persisted to disk: %w", err)
 	}
 
 	return nil

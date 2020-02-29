@@ -7,8 +7,6 @@ linters-settings:
     min-complexity: 10
   maligned:
     suggest-new: true
-  dupl:
-    threshold: 100
   goconst:
     min-len: 2
     min-occurrences: 2
@@ -27,38 +25,33 @@ linters-settings:
       - opinionated
     disabled-checks:
       - unnamedResult
+      - hugeParam
 
 linters:
   enable-all: true
   disable:
-    - maligned
-    - prealloc
-    - depguard
-    - interfacer
+    - wsl
+    - gomnd
 
 service:
-  golangci-lint-version: 1.15.x # use the fixed version to not introduce new linters unexpectedly
+  golangci-lint-version: 1.23.x # use the fixed version to not introduce new linters unexpectedly
   prepare:
     - GO111MODULE=on go mod vendor # required currently or golangci breaks
 
 issues:
   exclude-use-default: false
   exclude-rules:
-    - text: "G104: Errors unhandled."
-      path: ".+_test\\.go"
-      linters:
-        - gosec
-
     - text: "should have a package comment, unless it's in another file for this package"
       linters:
         - golint
 
-    - text: "Using the variable on range scope `c` in function literal"
-      path: ".+_test\\.go"
-      linters:
-        - scopelint
+    - text: "Potential file inclusion via variable"
+      path: "memory\\.go"
 
-    - text: "`ctx` is a global variable"
-      path: ".+_test\\.go"
+    - text: "Expect file permissions to be 0600 or less"
+      path: "memory\\.go"
+
+    - text: "Error return value of `os.Remove` is not checked"
       linters:
-        - gochecknoglobals
+        - errcheck
+      path: "memory_test\\.go"
